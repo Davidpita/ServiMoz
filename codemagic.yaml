@@ -17,42 +17,48 @@ workflows:
         script: |
           xcodegen generate --spec project.yaml
 
-      - name: Compilar para o simulador
+      - name: Compilar para simulador
         script: |
+          set -e
+
           xcodebuild \
             -project ServiMoz.xcodeproj \
             -scheme ServiMoz \
+            -configuration Release \
             -sdk iphonesimulator \
-            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Verificar aplicação
+      - name: Verificar executavel
         script: |
-          APP_PATH="build/Build/Products/Debug-iphonesimulator/ServiMoz.app"
+          set -e
 
-          if [ ! -d "$APP_PATH" ]; then
-            echo "ERRO: ServiMoz.app nao encontrado"
+          APP="build/Build/Products/Release-iphonesimulator/ServiMoz.app"
+
+          echo "=== Conteudo da app ==="
+          ls -la "$APP"
+
+          EXEC=$(/usr/libexec/PlistBuddy \
+            -c "Print :CFBundleExecutable" \
+            "$APP/Info.plist")
+
+          echo "Executavel esperado: $EXEC"
+
+          if [ ! -f "$APP/$EXEC" ]; then
+            echo "ERRO: Executavel ausente!"
+            find build/Build/Products -maxdepth 5 -print
             exit 1
           fi
 
-          EXECUTABLE=$(/usr/libexec/PlistBuddy \
-            -c "Print :CFBundleExecutable" "$APP_PATH/Info.plist")
+          file "$APP/$EXEC"
 
-          echo "Executavel esperado: $EXECUTABLE"
-
-          if [ ! -f "$APP_PATH/$EXECUTABLE" ]; then
-            echo "ERRO: Executavel nao encontrado"
-            ls -la "$APP_PATH"
-            exit 1
-          fi
-
-          echo "Aplicacao validada com sucesso!"
+          echo "Executavel encontrado!"
 
       - name: Criar ZIP para Appetize
         script: |
-          cd build/Build/Products/Debug-iphonesimulator
+          cd build/Build/Products/Release-iphonesimulator
 
           ditto -c -k --sequesterRsrc --keepParent \
             ServiMoz.app \
