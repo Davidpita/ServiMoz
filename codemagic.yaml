@@ -20,28 +20,28 @@ workflows:
       - name: Compilar e diagnosticar
         script: |
           set -e
+          set -o pipefail
 
           echo "=== Ficheiros Swift ==="
           find ServiMoz -name "*.swift" -print
 
-          echo "=== Targets e schemes ==="
-          xcodebuild -list -project ServiMoz.xcodeproj
+          echo "=== Verificar ficheiros no projecto Xcode ==="
+          grep -c "in Sources" \
+            ServiMoz.xcodeproj/project.pbxproj || true
 
-          echo "=== Configuracoes importantes ==="
+          echo "=== Configuracoes do executavel ==="
           xcodebuild \
             -project ServiMoz.xcodeproj \
             -scheme ServiMoz \
             -configuration Release \
             -sdk iphonesimulator \
             -showBuildSettings | grep -E \
-            "PRODUCT_TYPE =|EXECUTABLE_NAME =|MACH_O_TYPE =|SKIP_INSTALL =|SWIFT_VERSION ="
+            "EXECUTABLE_NAME =|PRODUCT_TYPE =|MACH_O_TYPE =|GENERATE_INFOPLIST_FILE =|SWIFT_VERSION ="
 
-          echo "=== Compilacao ==="
-          set -o pipefail
-
+          echo "=== Compilar aplicacao ==="
           xcodebuild \
             -project ServiMoz.xcodeproj \
-            -target ServiMoz \
+            -scheme ServiMoz \
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
@@ -49,12 +49,14 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee build-log.txt
 
-          echo "=== Etapas de compilacao Swift ==="
-          grep -E "SwiftCompile|SwiftDriver|CompileSwift|Ld " \
+          echo "=== Compilacao e ligacao ==="
+          grep -E \
+            "SwiftCompile|SwiftDriver|SwiftEmitModule|Ld |BUILD SUCCEEDED|BUILD FAILED" \
             build-log.txt || true
 
-          echo "=== Conteudo da app ==="
-          ls -la build/Build/Products/Release-iphonesimulator/ServiMoz.app
+          echo "=== Conteudo da aplicacao ==="
+          ls -la \
+            build/Build/Products/Release-iphonesimulator/ServiMoz.app
 
       - name: Verificar executavel
         script: |
