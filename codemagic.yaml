@@ -1,15 +1,22 @@
+
 workflows:
   ios-simulator:
     name: ServiMoz Simulator
     instance_type: mac_mini_m2
     max_build_duration: 30
+
     environment:
       xcode: latest
+
     scripts:
-      - name: Gerar projeto Xcode
+      - name: Instalar XcodeGen
         script: |
           brew install xcodegen
-          xcodegen generate
+
+      - name: Gerar projeto Xcode
+        script: |
+          xcodegen generate --spec project.yaml
+
       - name: Compilar para o simulador
         script: |
           xcodebuild \
@@ -20,9 +27,36 @@ workflows:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build
-      - name: Criar o zip da app
+
+      - name: Verificar aplicação
+        script: |
+          APP_PATH="build/Build/Products/Debug-iphonesimulator/ServiMoz.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "ERRO: ServiMoz.app nao encontrado"
+            exit 1
+          fi
+
+          EXECUTABLE=$(/usr/libexec/PlistBuddy \
+            -c "Print :CFBundleExecutable" "$APP_PATH/Info.plist")
+
+          echo "Executavel esperado: $EXECUTABLE"
+
+          if [ ! -f "$APP_PATH/$EXECUTABLE" ]; then
+            echo "ERRO: Executavel nao encontrado"
+            ls -la "$APP_PATH"
+            exit 1
+          fi
+
+          echo "Aplicacao validada com sucesso!"
+
+      - name: Criar ZIP para Appetize
         script: |
           cd build/Build/Products/Debug-iphonesimulator
-          zip -r "$CM_BUILD_DIR/ServiMoz.zip" ServiMoz.app
+
+          ditto -c -k --sequesterRsrc --keepParent \
+            ServiMoz.app \
+            "$CM_BUILD_DIR/ServiMoz.zip"
+
     artifacts:
       - ServiMoz.zip
