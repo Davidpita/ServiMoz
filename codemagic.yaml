@@ -17,19 +17,44 @@ workflows:
         script: |
           xcodegen generate --spec project.yaml
 
-      - name: Compilar para simulador
+      - name: Compilar e diagnosticar
         script: |
           set -e
 
+          echo "=== Ficheiros Swift ==="
+          find ServiMoz -name "*.swift" -print
+
+          echo "=== Targets e schemes ==="
+          xcodebuild -list -project ServiMoz.xcodeproj
+
+          echo "=== Configuracoes importantes ==="
           xcodebuild \
             -project ServiMoz.xcodeproj \
             -scheme ServiMoz \
             -configuration Release \
             -sdk iphonesimulator \
+            -showBuildSettings | grep -E \
+            "PRODUCT_TYPE =|EXECUTABLE_NAME =|MACH_O_TYPE =|SKIP_INSTALL =|SWIFT_VERSION ="
+
+          echo "=== Compilacao ==="
+          set -o pipefail
+
+          xcodebuild \
+            -project ServiMoz.xcodeproj \
+            -target ServiMoz \
+            -configuration Release \
+            -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build 2>&1 | tee build-log.txt
+
+          echo "=== Etapas de compilacao Swift ==="
+          grep -E "SwiftCompile|SwiftDriver|CompileSwift|Ld " \
+            build-log.txt || true
+
+          echo "=== Conteudo da app ==="
+          ls -la build/Build/Products/Release-iphonesimulator/ServiMoz.app
 
       - name: Verificar executavel
         script: |
