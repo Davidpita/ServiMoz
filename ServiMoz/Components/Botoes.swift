@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Botão roxo cheio (ex.: "Entrar", "Enviar Pedido").
+// Botao roxo cheio (ex.: "Entrar", "Enviar Pedido").
 struct BotaoPrimarioStyle: ButtonStyle {
     @Environment(\.isEnabled) private var ativo
 
@@ -17,7 +17,7 @@ struct BotaoPrimarioStyle: ButtonStyle {
     }
 }
 
-// Botão com contorno roxo (ex.: "Recusar", "Atualizar Estado").
+// Botao com contorno roxo (ex.: "Recusar", "Atualizar Estado").
 struct BotaoSecundarioStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
